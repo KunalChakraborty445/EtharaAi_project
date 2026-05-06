@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS with whitelist support
 const rawClientUrls = process.env.CLIENT_URLS || process.env.CLIENT_URL || 'http://localhost:5173';
-const allowedOrigins = rawClientUrls.split(',').map(u => u.trim());
+const allowedOrigins = rawClientUrls.split(',').map(u => u.trim()).filter(Boolean);
 
 console.log('🔓 Allowed CORS Origins:', allowedOrigins);
 
@@ -39,14 +39,25 @@ app.use(cors({
       console.log('✅ Allowed: No origin (server-to-server)');
       return callback(null, true);
     }
-    
-    // Check if origin is in allowed list
+
+    // Exact match against configured allowlist
     if (allowedOrigins.indexOf(origin) !== -1) {
       console.log(`✅ Allowed origin: ${origin}`);
       return callback(null, true);
     }
-    
-    // Block unauthorized origins
+
+    // Allow Vercel app subdomains (useful for preview/deployed apps)
+    try {
+      const host = new URL(origin).hostname;
+      if (host && host.endsWith('.vercel.app')) {
+        console.log(`✅ Allowed Vercel origin: ${origin}`);
+        return callback(null, true);
+      }
+    } catch (err) {
+      // ignore URL parse errors and fall through to block
+    }
+
+    // If not allowed, explicitly deny (no CORS headers will be sent)
     console.warn(`❌ Blocked origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
