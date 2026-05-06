@@ -26,21 +26,37 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable CORS with whitelist support (set CLIENT_URL or CLIENT_URLS in env)
+// Enable CORS with whitelist support
 const rawClientUrls = process.env.CLIENT_URLS || process.env.CLIENT_URL || 'http://localhost:5173';
 const allowedOrigins = rawClientUrls.split(',').map(u => u.trim());
 
+console.log('🔓 Allowed CORS Origins:', allowedOrigins);
+
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow non-browser requests like curl or server-to-server (no origin)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Allow non-browser requests (curl, Postman, server-to-server)
+    if (!origin) {
+      console.log('✅ Allowed: No origin (server-to-server)');
       return callback(null, true);
     }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`✅ Allowed origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Block unauthorized origins
+    console.warn(`❌ Blocked origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -52,17 +68,21 @@ app.get('/', (req, res) => {
   res.json({ 
     success: true,
     message: 'Team Task Manager API is running',
+    database: 'Connected',
+    environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString()
   });
 });
 
-// Error handler middleware (should be last)
+// Error handler middleware
 app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/`);
+  console.log(`📍 API Base: http://localhost:${PORT}/api`);
 });
 
 // Handle unhandled promise rejections
