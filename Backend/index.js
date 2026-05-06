@@ -23,6 +23,7 @@ const app = express();
 connectDB();
 
 // Body parser
+app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -32,42 +33,9 @@ const allowedOrigins = rawClientUrls.split(',').map(u => u.trim()).filter(Boolea
 
 console.log('🔓 Allowed CORS Origins:', allowedOrigins);
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow non-browser requests (curl, Postman, server-to-server)
-    if (!origin) {
-      console.log('✅ Allowed: No origin (server-to-server)');
-      return callback(null, true);
-    }
 
-    // Exact match against configured allowlist
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log(`✅ Allowed origin: ${origin}`);
-      return callback(null, true);
-    }
 
-    // Allow Vercel app subdomains (useful for preview/deployed apps)
-    try {
-      const host = new URL(origin).hostname;
-      if (host && host.endsWith('.vercel.app')) {
-        console.log(`✅ Allowed Vercel origin: ${origin}`);
-        return callback(null, true);
-      }
-    } catch (err) {
-      // ignore URL parse errors and fall through to block
-    }
 
-    // If not allowed, explicitly deny (no CORS headers will be sent)
-    console.warn(`❌ Blocked origin: ${origin}`);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-
-// Handle preflight requests
-app.options('*', cors());
 
 // Mount routes (support both /api/* and legacy /* to tolerate deployed client config)
 app.use('/api/auth', authRoutes);
