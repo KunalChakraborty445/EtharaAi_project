@@ -69,10 +69,13 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// Mount routes
+// Mount routes (support both /api/* and legacy /* to tolerate deployed client config)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/tasks', taskRoutes);
 
 // Health check
 app.get('/', (req, res) => {
